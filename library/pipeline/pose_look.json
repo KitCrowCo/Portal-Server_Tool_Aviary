@@ -1,0 +1,79 @@
+{
+ "name": "Look at a pose",
+ "group": "pose",
+ "read_only": true,
+ "objective": "Reads a pose kept in the pose bridge (a scene saved from the 3D OpenPose editor, or one an AI made) and says what it is: each joint's position (centimetres; y up from the floor, x to the viewer's right, z toward the viewer) and each bone's direction and each elbow's and knee's bend in words. Use it to see what a person changed before changing it further (Make a pose with this file as its base).",
+ "roles": {
+  "poser": {
+   "needs": [
+    "pose_read"
+   ],
+   "about": "the pose bridge the pose is kept in"
+  }
+ },
+ "params": {
+  "pose": {
+   "label": "Which pose",
+   "pick_assets": "pose",
+   "one": true,
+   "default": "latest",
+   "hint": "A file name, or latest: the one changed last (what a person just saved)."
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "type": "capability",
+   "needs": [
+    "pose"
+   ],
+   "gives": [
+    "record"
+   ],
+   "config": {
+    "role": "poser",
+    "capability": "pose_read",
+    "model": false,
+    "body": {
+     "pose": "{pose}"
+    },
+    "give": {
+     "record": "result"
+    }
+   }
+  },
+  {
+   "id": "say",
+   "type": "pose_describe",
+   "needs": [
+    "record"
+   ],
+   "gives": [
+    "described",
+    "joints"
+   ],
+   "config": {
+    "pose": "{record}",
+    "give": {
+     "text": "described",
+     "joints": "joints"
+    }
+   }
+  },
+  {
+   "id": "answer",
+   "type": "expr",
+   "needs": [
+    "described",
+    "joints"
+   ],
+   "gives": [
+    "seen"
+   ],
+   "config": {
+    "expr": "{'in_words': described, 'joints': joints}",
+    "give": "seen"
+   }
+  }
+ ]
+}

@@ -1,0 +1,165 @@
+{
+ "name": "Make a pose",
+ "group": "pose",
+ "read_only": false,
+ "objective": "Makes a pose for the 3D OpenPose editor from joint positions - one body, or several (a list, one set of joints per body, each standing where its neck is given: side by side means different x) and keeps it in the pose bridge as a new scene file a person can open (Load Scene), change and save back. Positions are centimetres in the editor's world: y up from the floor, x to the viewer's right, z toward the viewer; a figure facing the viewer has its left side at +x. Only the bones' directions are taken (the body keeps its proportions); the body stands where the neck is given. A standing adult: nose about 155, neck 138, shoulders 138 at x -17 / +17, hips 92 at x -10 / +10, knees 52, ankles 10. Answers the file's name and the pose as the editor will show it, in words.",
+ "roles": {
+  "poser": {
+   "needs": [
+    "pose_add",
+    "pose_read"
+   ],
+   "about": "the pose bridge the scene is kept in"
+  }
+ },
+ "params": {
+  "name": {
+   "label": "File name",
+   "default": "ai-pose",
+   "hint": "A short name for the scene file; a name already there gets -2, -3 (nothing is replaced)."
+  },
+  "joints": {
+   "label": "Joint positions",
+   "type": "long",
+   "hint": "A JSON object of joint name: [x, y, z] in centimetres, or a list of such objects for several bodies. Names: Nose, Neck, RShoulder, RElbow, RWrist, LShoulder, LElbow, LWrist, RHip, RKnee, RAnkle, LHip, LKnee, LAnkle (R: the figure's own right, at the viewer's left when it faces the viewer). A joint left out keeps the base pose's direction."
+  },
+  "base": {
+   "label": "Start from (a pose in the bridge)",
+   "pick_assets": "pose",
+   "one": true,
+   "default": "",
+   "hint": "(none): the editor's new body and camera. A pose file: its proportions, its camera and the directions of joints left out are kept - for changing a pose rather than making one."
+  }
+ },
+ "steps": [
+  {
+   "id": "from",
+   "type": "expr",
+   "needs": [
+    "base"
+   ],
+   "gives": [
+    "go_base",
+    "go_plain"
+   ],
+   "config": {
+    "expr": "'with' if base else 'without'",
+    "routes": {
+     "with": "go_base",
+     "without": "go_plain"
+    }
+   }
+  },
+  {
+   "id": "read_base",
+   "type": "capability",
+   "needs": [
+    "go_base",
+    "base"
+   ],
+   "gives": [
+    "base_scene"
+   ],
+   "config": {
+    "role": "poser",
+    "capability": "pose_read",
+    "model": false,
+    "body": {
+     "pose": "{base}"
+    },
+    "give": {
+     "base_scene": "result"
+    }
+   }
+  },
+  {
+   "id": "plain",
+   "type": "expr",
+   "needs": [
+    "go_plain"
+   ],
+   "gives": [
+    "base_scene"
+   ],
+   "config": {
+    "expr": "{}",
+    "give": "base_scene"
+   }
+  },
+  {
+   "id": "make",
+   "type": "pose_scene",
+   "needs": [
+    "joints",
+    "base_scene"
+   ],
+   "gives": [
+    "scene"
+   ],
+   "config": {
+    "joints": "{joints}",
+    "base": "{base_scene}",
+    "give": {
+     "scene": "scene"
+    }
+   }
+  },
+  {
+   "id": "keep",
+   "type": "capability",
+   "needs": [
+    "scene",
+    "name"
+   ],
+   "gives": [
+    "kept"
+   ],
+   "config": {
+    "role": "poser",
+    "capability": "pose_add",
+    "model": false,
+    "body": {
+     "pose": "{name}",
+     "scene": "{scene}"
+    },
+    "give": {
+     "kept": "result"
+    }
+   }
+  },
+  {
+   "id": "say",
+   "type": "pose_describe",
+   "needs": [
+    "scene",
+    "kept"
+   ],
+   "gives": [
+    "described",
+    "joints_now"
+   ],
+   "config": {
+    "pose": "{scene}",
+    "give": {
+     "text": "described",
+     "joints": "joints_now"
+    }
+   }
+  },
+  {
+   "id": "answer",
+   "type": "expr",
+   "needs": [
+    "kept",
+    "described"
+   ],
+   "gives": [
+    "made"
+   ],
+   "config": {
+    "expr": "{'file': (kept or {}).get('saved'), 'as_the_editor_shows_it': described}",
+    "give": "made"
+   }
+  }
+ ]
+}

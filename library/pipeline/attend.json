@@ -1,0 +1,58 @@
+{
+ "name": "Is it for the assistant? (awareness)",
+ "group": "voice",
+ "objective": "Reads what was just said in a room, with the conversation before it, and decides at once: answer now, wait for the rest (the speaker paused mid-thought), or let it be (people talking to each other, not to the assistant). A quick decision model answers with one word, held to the choices by a grammar.",
+ "about": [
+  "input"
+ ],
+ "roles": {
+  "judge": {
+   "needs": [
+    "decide"
+   ],
+   "about": "a quick model that decides whether speech is for the assistant (a small one is best: it is asked after every utterance)"
+  }
+ },
+ "params": {
+  "input": {
+   "label": "What was said, with the conversation before it",
+   "type": "long",
+   "default": "",
+   "internal": true
+  },
+  "rules": {
+   "label": "How to decide",
+   "type": "long",
+   "default": "You listen in a room for a voice assistant. Several people may be talking; not everything said is meant for the assistant. Read the conversation and what was just said, then answer with exactly one word.\nanswer: it is meant for the assistant and complete enough to answer - it names the assistant, asks or tells it something, or carries on the exchange the assistant is part of (a reply to the assistant's last words needs no name).\nwait: it is meant for the assistant but the speaker is not done - it breaks off mid-sentence or mid-thought (a trailing 'and', 'so', 'because', an unfinished question, a list still going). A long pause after it means they are done.\naside: it is not meant for the assistant - people talking to each other, a remark to someone else in the room, a phone call, background speech, or something unrelated to the exchange with the assistant that does not name it.\nWhen unsure between answer and aside and the assistant was named or just spoke to that person, answer."
+  }
+ },
+ "steps": [
+  {
+   "id": "decide",
+   "type": "capability",
+   "needs": [
+    "input",
+    "rules"
+   ],
+   "gives": [
+    "act"
+   ],
+   "config": {
+    "role": "judge",
+    "capability": "decide",
+    "body": {
+     "input": "{input}",
+     "system": "{rules}",
+     "choices": [
+      "answer",
+      "wait",
+      "aside"
+     ]
+    },
+    "give": {
+     "act": "result.choice"
+    }
+   }
+  }
+ ]
+}

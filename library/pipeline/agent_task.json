@@ -1,0 +1,207 @@
+{
+ "name": "Agent: a task",
+ "group": "conversation",
+ "objective": "A task carried out by a model that uses tools until it calls finish: it reads, proposes changes for review, checks them, and says what it did and what is left. Nothing it proposes is applied until a person accepts it.",
+ "roles": {
+  "main": {
+   "needs": [
+    "chat"
+   ],
+   "about": "the model that works the task and decides which tools to use"
+  }
+ },
+ "params": {
+  "task": {
+   "label": "Task",
+   "type": "long"
+  },
+  "files": {
+   "label": "Files (a library space)",
+   "pick": "space",
+   "default": "",
+   "hint": "A folder it reads directly and changes only by proposals, which wait in that space's review (Tessa > Agents, or Designer > Lab)."
+  },
+  "space": {
+   "label": "Its own space",
+   "default": "",
+   "hint": "A folder name it keeps notes in between runs, written directly. Empty: none."
+  },
+  "tools": {
+   "label": "Pipelines it may use",
+   "pick": "pipeline",
+   "many": true,
+   "default": []
+  },
+  "projects": {
+   "label": "Work on projects (Muninn)",
+   "type": "boolean",
+   "default": false
+  },
+  "skills": {
+   "label": "Skills",
+   "pick": "skill",
+   "many": true,
+   "default": []
+  },
+  "prompts": {
+   "label": "Prompt blocks (before the standing instructions)",
+   "pick": "prompt",
+   "many": true,
+   "default": [],
+   "hint": "Prompts kept in the library, each its own block."
+  },
+  "system": {
+   "label": "Standing instructions",
+   "type": "long",
+   "default": ""
+  },
+  "contexts": {
+   "label": "Context blocks (after them)",
+   "pick": "context",
+   "many": true,
+   "default": [],
+   "hint": "Contexts kept in the library (house rules, what a project is)."
+  },
+  "check_tool": {
+   "label": "Goal check: tool",
+   "default": "",
+   "hint": "Run when it calls finish (check_files with Files: new problems in what it proposed). Problems send it back to work."
+  },
+  "check_pipeline": {
+   "label": "Goal check: pipeline",
+   "pick": "pipeline",
+   "default": "",
+   "hint": "Given task and summary; it gives ok and feedback."
+  },
+  "rounds": {
+   "label": "Most rounds",
+   "type": "integer",
+   "default": 40
+  },
+  "num_ctx": {
+   "label": "Context window (tokens) to keep the conversation inside",
+   "type": "integer",
+   "default": "",
+   "hint": "Empty: 32768. How much of the conversation the model holds at once; the machine plans the model's memory for it (window x its requests at once must fit)."
+  },
+  "written": {
+   "label": "Tell it the written call form too",
+   "type": "boolean",
+   "default": false,
+   "hint": "For a model or program without tool calling of its own. Calls written in the text are read either way."
+  },
+  "kv_cache_type": {
+   "label": "Context memory precision",
+   "pick_from": [
+    [
+     "",
+     "as the machine decides"
+    ],
+    [
+     "f16",
+     "full (f16)"
+    ],
+    [
+     "q8_0",
+     "q8_0: half the memory, about twice the window"
+    ],
+    [
+     "q4_0",
+     "q4_0: a quarter of the memory"
+    ]
+   ],
+   "default": "",
+   "advanced": true,
+   "hint": "Less precision fits a larger window in the same memory."
+  },
+  "reply_tokens": {
+   "label": "Longest reply (tokens)",
+   "type": "integer",
+   "default": 0,
+   "advanced": true,
+   "hint": "0: as long as the model needs."
+  }
+ },
+ "steps": [
+  {
+   "id": "how",
+   "type": "texts",
+   "needs": [
+    "skills",
+    "system"
+   ],
+   "gives": [
+    "manner"
+   ],
+   "config": {
+    "kind": "skill",
+    "ids": "{skills}",
+    "after": "{system}",
+    "give": "manner"
+   }
+  },
+  {
+   "id": "work",
+   "type": "agent",
+   "needs": [
+    "task",
+    "files",
+    "space",
+    "tools",
+    "projects",
+    "manner",
+    "check_tool",
+    "check_pipeline",
+    "rounds",
+    "num_ctx",
+    "written",
+    "prompts",
+    "contexts",
+    "kv_cache_type",
+    "reply_tokens"
+   ],
+   "gives": [
+    "summary",
+    "status",
+    "proposed",
+    "notes",
+    "calls",
+    "rounds_used"
+   ],
+   "keep": true,
+   "config": {
+    "role": "main",
+    "mode": "task",
+    "task": "{task}",
+    "files": "{files}",
+    "space": "{space}",
+    "tools": "{tools}",
+    "projects": "{projects}",
+    "system": "{manner}",
+    "check": {
+     "tool": "{check_tool}",
+     "pipeline": "{check_pipeline}"
+    },
+    "rounds": "{rounds}",
+    "num_ctx": "{num_ctx}",
+    "written": "{written}",
+    "give": {
+     "summary": "text",
+     "status": "status",
+     "proposed": "proposed",
+     "notes": "notes",
+     "calls": "calls",
+     "rounds_used": "rounds"
+    },
+    "prompts": "{prompts}",
+    "contexts": "{contexts}",
+    "body": {
+     "options": {
+      "kv_cache_type": "{kv_cache_type}",
+      "num_predict": "{reply_tokens}"
+     }
+    }
+   }
+  }
+ ]
+}

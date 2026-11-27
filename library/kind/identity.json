@@ -1,0 +1,54 @@
+{
+ "name": "Identities",
+ "about": "Who an AI on this portal is over time, not what answers one request: the account it acts as (one stream per account, never switched), the model it is built on, how it answers (a mode: pipeline, values, roles), how much of its stream a turn is given, the LoRAs and memory that grow with it. Tessa > Collab answers as the identity its stream panel names; changing the identity changes Tessa everywhere it is used.",
+ "fields": {
+  "name": {
+   "label": "Name"
+  },
+  "about": {
+   "label": "Who this is (shown where it answers)",
+   "type": "long"
+  },
+  "account": {
+   "label": "Its account (the AI user it acts as)",
+   "hint": "The portal account this identity is: its one stream, what it may see and do (Settings > Users and scopes), and who may talk with it (the grant use on ai:<account>). Empty: the portal's AI account (AI_USER in .env, else aviary)."
+  },
+  "mode": {
+   "label": "How it answers",
+   "pick": "mode",
+   "hint": "A mode keeps the pipeline, its values (prompt, context window, contexts) and the model in each role. Make one from a Chat conversation (Save as a mode) and pick it here. Empty: the face's own pipeline and values."
+  },
+  "recall_last": {
+   "label": "Messages of its stream given each turn",
+   "type": "integer",
+   "default": 0,
+   "hint": "Only that many of the latest messages; 0: all, fitted to the context window by the pipeline. The stream itself keeps everything."
+  },
+  "recall_within_partner": {
+   "label": "With others, recall only what was said with them",
+   "type": "boolean",
+   "default": true,
+   "hint": "On: talking with someone who is not a primary user, it is given only that person's part of its stream. Off: it is given all of it and decides itself what to share, as any user would."
+  },
+  "show_last": {
+   "label": "Messages of its stream shown on the page",
+   "type": "integer",
+   "default": 200,
+   "hint": "Only the drawing: the stream keeps everything, and what a turn is given is set above."
+  },
+  "memory": {
+   "label": "Its long-term memory (knowledge group)",
+   "hint": "The knowledge group that holds what it keeps between conversations. Stored here; read by pipelines that take a memory group."
+  },
+  "loras": {
+   "label": "LoRAs built for it",
+   "type": "list",
+   "default": [],
+   "hint": "Adapter files trained for this identity, by name. Stored here; applying them per request is not built yet."
+  },
+  "notes": {
+   "label": "Notes (why this model, what changed)",
+   "type": "long"
+  }
+ }
+}

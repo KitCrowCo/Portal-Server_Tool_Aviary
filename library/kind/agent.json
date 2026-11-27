@@ -1,0 +1,196 @@
+{
+ "name": "AI members",
+ "about": "An AI that works here like a person given access: who it works for, its instructions, what it may reach, and how its model runs. It writes only in its own space; every other change it proposes, and a person accepts it. Used by the orchestrator pipeline (and any agent step that names it).",
+ "fields": {
+  "name": {
+   "label": "Name",
+   "section": "Who"
+  },
+  "about": {
+   "label": "What it is for",
+   "type": "long",
+   "section": "Who"
+  },
+  "owner": {
+   "label": "Works for",
+   "pick_user": true,
+   "empty": "(whoever works with it - anyone in the portal)",
+   "section": "Who",
+   "hint": "Its work runs on this person's behalf and never reaches more than they may. Only they (and the people below) may work with it. None: it works for whoever uses it, with that person's reach."
+  },
+  "users": {
+   "label": "Others who may work with it",
+   "pick_users": true,
+   "everyone": true,
+   "default": [],
+   "section": "Who"
+  },
+  "prompts": {
+   "label": "Prompt blocks (first)",
+   "pick": "prompt",
+   "many": true,
+   "default": [],
+   "section": "Instructions",
+   "hint": "Prompts kept in the library, each its own block before the standing instructions. Make and change them in Designer > Parts; one block can serve several AIs."
+  },
+  "system": {
+   "label": "Standing instructions",
+   "type": "long",
+   "default": "",
+   "section": "Instructions",
+   "hint": "Written by a person. The AI proposes changes to them; it never edits them."
+  },
+  "contexts": {
+   "label": "Context blocks (after)",
+   "pick": "context",
+   "many": true,
+   "default": [],
+   "section": "Instructions",
+   "hint": "Contexts kept in the library (house rules, what a project is), each its own block after the standing instructions."
+  },
+  "skills": {
+   "label": "Skills",
+   "pick": "skill",
+   "many": true,
+   "default": [],
+   "section": "Instructions",
+   "hint": "Ways of doing things it may use; their texts join its instructions."
+  },
+  "read_first": {
+   "label": "Shared files it reads at every start",
+   "type": "list",
+   "default": [],
+   "section": "Instructions",
+   "advanced": true,
+   "hint": "[{\"project\": slug, \"file\": path}]: preferences, skills, house rules kept in a Muninn project you both see. Changed by proposal."
+  },
+  "space": {
+   "label": "Its own space",
+   "pick_dir": "agent_spaces",
+   "default": "",
+   "section": "What it may reach",
+   "hint": "A folder of its own (notes, drafts, plans), written without asking. Pick one or type a new name. People open it in \"AI members' own spaces\"; it proposes from it with propose_from_space."
+  },
+  "files": {
+   "label": "Files it reads and proposes changes to",
+   "pick": "space",
+   "default": "",
+   "section": "What it may reach",
+   "hint": "A library space (the code, a wiki): read directly, changed only by proposals you accept in that space's Review."
+  },
+  "projects": {
+   "label": "Projects (Muninn)",
+   "type": "list",
+   "default": [],
+   "section": "What it may reach",
+   "hint": "true for every project whose mask lets it in (agent:<this id>), or a list of project slugs."
+  },
+  "tools": {
+   "label": "Pipelines it may use as tools",
+   "pick": "pipeline",
+   "many": true,
+   "default": [],
+   "section": "What it may reach"
+  },
+  "delegate_most": {
+   "label": "Sub-agents per answer",
+   "type": "integer",
+   "default": 0,
+   "section": "What it may reach",
+   "hint": "0: it does everything itself. More: it may hand that many well-bounded tasks to sub-agents, which work as it does with part of what it has."
+  },
+  "delegate_rounds": {
+   "label": "Rounds per sub-agent",
+   "type": "integer",
+   "default": 30,
+   "section": "What it may reach"
+  },
+  "background_most": {
+   "label": "Tasks it may leave running",
+   "type": "integer",
+   "default": 0,
+   "section": "What it may reach",
+   "hint": "0: every tool it calls is waited for. More: it may also start its tools as tasks of their own (start_task) that go on after its answer, check on them later (task_status), take results from one into the next, and stop them - at most this many going at once. Each is a run of yours, in the runs list."
+  },
+  "num_ctx": {
+   "label": "Context window (tokens)",
+   "type": "integer",
+   "default": 32768,
+   "section": "How it runs",
+   "hint": "How much of the conversation the model holds at once; older tool results are dropped first to stay inside it. The machine holds this for every request it serves at once (Settings, Operations: requests at once per member), so window x requests at once must fit its memory: a larger window means fewer requests at once on that machine, or a smaller model. A conversation's own setting stands above this."
+  },
+  "kv_cache_type": {
+   "label": "Context memory precision",
+   "pick_from": [
+    [
+     "",
+     "as the machine decides"
+    ],
+    [
+     "f16",
+     "full (f16): best, most memory"
+    ],
+    [
+     "q8_0",
+     "q8_0: about half the memory, so about twice the window; near-identical answers"
+    ],
+    [
+     "q4_0",
+     "q4_0: a quarter of the memory; answers may suffer on long windows"
+    ]
+   ],
+   "default": "",
+   "section": "How it runs",
+   "hint": "How the model keeps what it has read. Less precision fits a larger window, or more requests at once, in the same memory."
+  },
+  "reply_tokens": {
+   "label": "Longest reply (tokens)",
+   "type": "integer",
+   "default": 0,
+   "section": "How it runs",
+   "hint": "0: as long as the model needs. A limit cuts a reply (a tool call too) when reached."
+  },
+  "rounds": {
+   "label": "Most rounds per answer",
+   "type": "integer",
+   "default": 40,
+   "section": "How it runs",
+   "hint": "A round is one reply of the model with the tools it asks for. A run that ends at this limit can go on: Change ... > Go on with these."
+  },
+  "think": {
+   "label": "Thinking",
+   "pick_from": [
+    [
+     "",
+     "as the model does by default"
+    ],
+    [
+     "on",
+     "on"
+    ],
+    [
+     "off",
+     "off"
+    ]
+   ],
+   "default": "",
+   "section": "How it runs"
+  },
+  "temperature": {
+   "label": "Temperature",
+   "type": "number",
+   "default": null,
+   "section": "How it runs",
+   "advanced": true,
+   "hint": "Empty: the model's own. Lower: steadier tool use."
+  },
+  "grants": {
+   "label": "Grants as one object (older profiles)",
+   "type": "object",
+   "default": {},
+   "advanced": true,
+   "hint": "Profiles made before the fields above keep their grants here: space, projects, files, tools, skills, delegate {most, rounds}. A field above stands over the same grant here."
+  }
+ },
+ "text": "system"
+}

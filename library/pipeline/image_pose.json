@@ -1,0 +1,701 @@
+{
+ "name": "Pose a character (pose picture + who)",
+ "group": "images",
+ "objective": "A picture of a character in a pose given as a picture: the pose picture (a 3D mannequin render, a depth map or a sketch, framed as the final picture should be) is what the painting starts from, so its layout and limbs are kept; the picture of the character is the reference the painted figure is made to match. Sitting, crouching and foreshortened poses come from the pose picture instead of from words. The pose picture can also be given as a second reference instead of (or as well as) the start: the model then takes the pose from it the way it takes the character from the first. The pose can come from the pose editor instead (the pose bridge beside a 3D OpenPose editor): its keypoints are drawn as an OpenPose picture and used the same way.",
+ "about": [
+  "prompt_text",
+  "pose",
+  "character"
+ ],
+ "roles": {
+  "encoder": {
+   "needs": [
+    "text_encode"
+   ],
+   "about": "the encoder model and the machine that encodes - only when the prompt has no encoding yet for this text and length (step kept). A run that finds one never places or loads it."
+  },
+  "painter": {
+   "needs": [
+    "image_generate"
+   ],
+   "about": "the image model and the machine that paints"
+  },
+  "poser": {
+   "needs": [
+    "pose_read"
+   ],
+   "about": "the pose bridge the pose is read from - only when the pose comes from the editor"
+  }
+ },
+ "params": {
+  "saved": {
+   "label": "Kept prompt",
+   "pick": "image_prompt",
+   "default": "",
+   "hint": "One of Sunbird's kept prompts (Sunbird, Prompts)."
+  },
+  "pose_from": {
+   "label": "The pose comes from",
+   "pick_from": [
+    [
+     "picture",
+     "a picture (below)"
+    ],
+    [
+     "bridge",
+     "the pose editor (pose bridge)"
+    ]
+   ],
+   "default": "picture",
+   "hint": "The pose editor: a pose kept there (or the one last written) is drawn as an OpenPose picture - coloured limbs on black - and used as the pose picture. Such a picture suits \"a second reference\" below, or a pose LoRA, better than the start."
+  },
+  "bridge_pose": {
+   "label": "Pose in the editor",
+   "pick_assets": "pose",
+   "one": true,
+   "default": "",
+   "hint": "(none): the pose last written there (the editor's active pose)."
+  },
+  "pose_width": {
+   "label": "Pose picture width (0: the pose's own)",
+   "type": "integer",
+   "default": 0,
+   "hint": "For a pose from the editor: the size it is drawn at, which is the result's size. 0 takes the canvas the pose record names, else 768 x 1024."
+  },
+  "pose_height": {
+   "label": "Pose picture height (0: the pose's own)",
+   "type": "integer",
+   "default": 0
+  },
+  "pose": {
+   "label": "The pose (a picture)",
+   "type": "items",
+   "space_from": "from_space",
+   "default": [],
+   "hint": "A mannequin render, depth map or rough sketch of the pose, at the framing and shape the result should have (its size is the result's size). Keep a folder of poses (e.g. poses/sitting) to reuse them."
+  },
+  "character": {
+   "label": "Who (a picture of the character)",
+   "type": "items",
+   "space_from": "from_space",
+   "default": [],
+   "hint": "A clear picture of the character: face, clothes, colours. The painted figure is made to match it."
+  },
+  "pose_as": {
+   "label": "The pose picture is used as",
+   "pick_from": [
+    [
+     "start",
+     "the start of the painting (its layout kept; strength below)"
+    ],
+    [
+     "reference",
+     "a second reference (the painting starts blank and follows the figure's pose)"
+    ],
+    [
+     "both",
+     "both: the start and a second reference"
+    ]
+   ],
+   "default": "start",
+   "hint": "Start: the limbs stay where the pose picture has them, its look is painted over. Reference: the model reads the pose from the picture like it reads the character, which suits a skeleton or mannequin render from a pose editor (OpenPose) that should not show through. Both: try when one alone loses the pose."
+  },
+  "pose_words": {
+   "label": "Words for the references",
+   "type": "long",
+   "default": "The same character as in the first reference picture, in exactly the pose of the figure in the second reference picture.",
+   "hint": "Put before the prompt when the pose picture is a reference (reference or both), so the model knows which picture is who and which is the pose. The references are counted in this order: the character first, the pose second."
+  },
+  "prompt": {
+   "label": "Words added after the kept prompt",
+   "type": "long",
+   "default": "",
+   "hint": "Describe the scene and the character in words as well (who, what they wear, where they are). With a kept prompt chosen, these are added after it."
+  },
+  "strength": {
+   "label": "How far from the pose picture (0 to 1)",
+   "type": "number",
+   "default": 0.9,
+   "hint": "How much of the pose picture is painted over. 0.85 to 0.95 keeps the pose's layout and limbs and repaints everything else; lower keeps more of the mannequin's look, higher may lose the pose. Try 0.85, 0.9 and 0.95 on a new pose and keep what works for that kind of pose."
+  },
+  "steps": {
+   "label": "Steps",
+   "type": "integer",
+   "default": 4
+  },
+  "seed": {
+   "label": "Seed (-1: a new one each time)",
+   "type": "integer",
+   "default": -1
+  },
+  "from_space": {
+   "label": "Picked from",
+   "pick": "space",
+   "default": "media"
+  },
+  "space": {
+   "label": "Kept in",
+   "pick": "space",
+   "default": "media"
+  },
+  "folder": {
+   "label": "Folder there",
+   "default": "images"
+  },
+  "max_len": {
+   "label": "Prompt tokens kept",
+   "type": "integer",
+   "default": 512,
+   "hint": "Longer prompts are cut here at encoding."
+  },
+  "truncate": {
+   "label": "Cut a longer prompt",
+   "type": "boolean",
+   "default": true
+  },
+  "loras": {
+   "label": "LoRAs, each at its own strength",
+   "pick_assets": "image_lora",
+   "strengths": true,
+   "default": {},
+   "hint": "A strength beside each LoRA the machines offer (the files in a machine's image models, lora/flux2): empty or 0 leaves it out, 1 is its full effect. At most three are used at once. A pose LoRA (for example one trained for mannequin-to-character pose transfer) goes here."
+  },
+  "guidance": {
+   "label": "Guidance",
+   "type": "number",
+   "default": 1.0
+  },
+  "shift": {
+   "label": "Shift (empty: the model's own)",
+   "type": "number",
+   "default": null
+  },
+  "offload": {
+   "label": "Memory saving",
+   "pick_from": [
+    [
+     "none",
+     "none (fastest, most memory)"
+    ],
+    [
+     "vae_cpu",
+     "decoder on the processor (about 1 GB less)"
+    ],
+    [
+     "sequential",
+     "block by block (slowest, least memory)"
+    ]
+   ],
+   "default": "none",
+   "hint": "What the painter keeps on the graphics side while it works. When a run ends with \"out of memory\", take the next heavier one."
+  },
+  "vae_tiling": {
+   "label": "Decode in tiles",
+   "type": "boolean",
+   "default": true
+  }
+ },
+ "steps": [
+  {
+   "id": "words",
+   "type": "texts",
+   "needs": [
+    "saved",
+    "prompt"
+   ],
+   "gives": [
+    "prompt_base"
+   ],
+   "config": {
+    "kind": "image_prompt",
+    "ids": "{saved}",
+    "after": "{prompt}",
+    "join": "\n",
+    "give": "prompt_base"
+   }
+  },
+  {
+   "id": "posed",
+   "type": "expr",
+   "needs": [
+    "prompt_base",
+    "pose_as",
+    "pose_words"
+   ],
+   "gives": [
+    "prompt_text"
+   ],
+   "config": {
+    "expr": "prompt_base if pose_as == 'start' else (str(pose_words or '') + '\\n' + str(prompt_base or '')).strip()",
+    "give": "prompt_text"
+   }
+  },
+  {
+   "id": "kept",
+   "type": "kept_encoding",
+   "needs": [
+    "saved",
+    "prompt_text",
+    "max_len"
+   ],
+   "gives": [
+    "kept_embed",
+    "kept_at"
+   ],
+   "config": {
+    "kind": "image_prompt",
+    "id": "{saved}",
+    "text": "{prompt_text}",
+    "max_len": "{max_len}",
+    "give": {
+     "kept_embed": "embed",
+     "kept_at": "at"
+    }
+   }
+  },
+  {
+   "id": "choose",
+   "type": "expr",
+   "needs": [
+    "kept_embed"
+   ],
+   "gives": [
+    "go_kept",
+    "go_new"
+   ],
+   "config": {
+    "expr": "'kept' if kept_embed else 'new'",
+    "routes": {
+     "kept": "go_kept",
+     "new": "go_new"
+    }
+   }
+  },
+  {
+   "id": "use",
+   "type": "expr",
+   "needs": [
+    "go_kept",
+    "kept_embed"
+   ],
+   "gives": [
+    "embed"
+   ],
+   "config": {
+    "expr": "kept_embed",
+    "give": "embed"
+   }
+  },
+  {
+   "id": "use_at",
+   "type": "expr",
+   "needs": [
+    "go_kept",
+    "kept_at"
+   ],
+   "gives": [
+    "embed_at"
+   ],
+   "config": {
+    "expr": "kept_at",
+    "give": "embed_at"
+   }
+  },
+  {
+   "id": "encode",
+   "type": "capability",
+   "needs": [
+    "go_new",
+    "prompt_text",
+    "max_len",
+    "truncate"
+   ],
+   "gives": [
+    "embed",
+    "encoded",
+    "embed_at",
+    "encoder"
+   ],
+   "config": {
+    "role": "encoder",
+    "capability": "text_encode",
+    "body": {
+     "prompt": "{prompt_text}",
+     "max_sequence_length": "{max_len}",
+     "hard_truncate": "{truncate}"
+    },
+    "give": {
+     "embed": "result.job_id",
+     "encoded": "result.meta",
+     "embed_at": "provider",
+     "encoder": "asset"
+    }
+   }
+  },
+  {
+   "id": "record",
+   "type": "expr",
+   "needs": [
+    "encoded",
+    "saved",
+    "prompt"
+   ],
+   "gives": [
+    "record"
+   ],
+   "config": {
+    "expr": "bool(saved) and not str(prompt or '').strip()",
+    "give": "record"
+   }
+  },
+  {
+   "id": "note",
+   "type": "lib_note",
+   "needs": [
+    "record",
+    "embed",
+    "embed_at",
+    "encoder",
+    "encoded",
+    "max_len",
+    "prompt_text",
+    "saved"
+   ],
+   "gives": [
+    "noted"
+   ],
+   "config": {
+    "kind": "image_prompt",
+    "id": "{saved}",
+    "field": "encodings",
+    "when": "record",
+    "same": [
+     "at",
+     "encoder",
+     "max_len",
+     "text"
+    ],
+    "record": {
+     "embed": "{embed}",
+     "at": "{embed_at}",
+     "encoder": "{encoder}",
+     "max_len": "{max_len}",
+     "tokens": "{encoded}",
+     "text": "{prompt_text}"
+    },
+    "give": "noted"
+   }
+  },
+  {
+   "id": "carry",
+   "type": "carry",
+   "needs": [
+    "embed",
+    "embed_at"
+   ],
+   "gives": [
+    "carried"
+   ],
+   "config": {
+    "from_at": "{embed_at}",
+    "to": "painter",
+    "location": "vault",
+    "path": "jobs/{embed}",
+    "give": "carried"
+   }
+  },
+  {
+   "id": "source",
+   "type": "expr",
+   "needs": [
+    "pose_from"
+   ],
+   "gives": [
+    "go_file",
+    "go_bridge"
+   ],
+   "config": {
+    "expr": "pose_from",
+    "routes": {
+     "picture": "go_file",
+     "bridge": "go_bridge"
+    }
+   }
+  },
+  {
+   "id": "which",
+   "type": "expr",
+   "needs": [
+    "go_bridge",
+    "bridge_pose"
+   ],
+   "gives": [
+    "pose_name"
+   ],
+   "config": {
+    "expr": "bridge_pose or 'active'",
+    "give": "pose_name"
+   }
+  },
+  {
+   "id": "bridge_read",
+   "type": "capability",
+   "needs": [
+    "pose_name"
+   ],
+   "gives": [
+    "pose_record"
+   ],
+   "config": {
+    "role": "poser",
+    "capability": "pose_read",
+    "model": false,
+    "body": {
+     "pose": "{pose_name}"
+    },
+    "give": {
+     "pose_record": "result"
+    }
+   }
+  },
+  {
+   "id": "draw_pose",
+   "type": "pose_draw",
+   "needs": [
+    "pose_record",
+    "pose_width",
+    "pose_height"
+   ],
+   "gives": [
+    "b64"
+   ],
+   "config": {
+    "pose": "{pose_record}",
+    "width": "{pose_width}",
+    "height": "{pose_height}",
+    "give": {
+     "b64": "b64"
+    }
+   }
+  },
+  {
+   "id": "list",
+   "type": "file_list",
+   "needs": [
+    "go_file",
+    "pose",
+    "from_space"
+   ],
+   "gives": [
+    "files"
+   ],
+   "config": {
+    "space": "{from_space}",
+    "paths": "{pose}",
+    "extensions": [
+     ".png",
+     ".jpg",
+     ".jpeg",
+     ".webp"
+    ],
+    "give": "files"
+   }
+  },
+  {
+   "id": "first",
+   "type": "expr",
+   "needs": [
+    "files"
+   ],
+   "gives": [
+    "path"
+   ],
+   "config": {
+    "expr": "files[0]",
+    "give": "path"
+   }
+  },
+  {
+   "id": "read",
+   "type": "file_read",
+   "needs": [
+    "path",
+    "from_space"
+   ],
+   "gives": [
+    "b64"
+   ],
+   "config": {
+    "space": "{from_space}",
+    "path": "{path}",
+    "base64": true,
+    "give": "b64"
+   }
+  },
+  {
+   "id": "list_who",
+   "type": "file_list",
+   "needs": [
+    "character",
+    "from_space"
+   ],
+   "gives": [
+    "who_files"
+   ],
+   "config": {
+    "space": "{from_space}",
+    "paths": "{character}",
+    "extensions": [
+     ".png",
+     ".jpg",
+     ".jpeg",
+     ".webp"
+    ],
+    "give": "who_files"
+   }
+  },
+  {
+   "id": "first_who",
+   "type": "expr",
+   "needs": [
+    "who_files"
+   ],
+   "gives": [
+    "who_path"
+   ],
+   "config": {
+    "expr": "who_files[0]",
+    "give": "who_path"
+   }
+  },
+  {
+   "id": "read_who",
+   "type": "file_read",
+   "needs": [
+    "who_path",
+    "from_space"
+   ],
+   "gives": [
+    "who_b64"
+   ],
+   "config": {
+    "space": "{from_space}",
+    "path": "{who_path}",
+    "base64": true,
+    "give": "who_b64"
+   }
+  },
+  {
+   "id": "lora_list",
+   "type": "expr",
+   "needs": [
+    "loras"
+   ],
+   "gives": [
+    "lora_list"
+   ],
+   "config": {
+    "expr": "[{'path': n, 'scale': float(s)} for n, s in loras.items() if s and float(s)] if isinstance(loras, dict) else [{'path': n, 'scale': 1.0} for n in loras or []]",
+    "give": "lora_list"
+   }
+  },
+  {
+   "id": "start_img",
+   "type": "expr",
+   "needs": [
+    "b64",
+    "pose_as"
+   ],
+   "gives": [
+    "start_image"
+   ],
+   "config": {
+    "expr": "'' if pose_as == 'reference' else 'data:image/png;base64,' + b64",
+    "give": "start_image"
+   }
+  },
+  {
+   "id": "refs",
+   "type": "expr",
+   "needs": [
+    "b64",
+    "who_b64",
+    "pose_as"
+   ],
+   "gives": [
+    "references"
+   ],
+   "config": {
+    "expr": "['data:image/png;base64,' + who_b64] + (['data:image/png;base64,' + b64] if pose_as != 'start' else [])",
+    "give": "references"
+   }
+  },
+  {
+   "id": "paint",
+   "type": "capability",
+   "once": true,
+   "needs": [
+    "embed",
+    "prompt_text",
+    "strength",
+    "steps",
+    "seed",
+    "carried",
+    "lora_list",
+    "guidance",
+    "shift",
+    "offload",
+    "vae_tiling",
+    "start_image",
+    "references"
+   ],
+   "gives": [
+    "file_name"
+   ],
+   "config": {
+    "role": "painter",
+    "capability": "image_generate",
+    "detached": true,
+    "body": {
+     "prompt": "{prompt_text}",
+     "embed_job_id": "{embed}",
+     "image": "{start_image}",
+     "strength": "{strength}",
+     "width": 0,
+     "height": 0,
+     "steps": "{steps}",
+     "seed": "{seed}",
+     "guidance_scale": "{guidance}",
+     "loras": "{lora_list}",
+     "shift": "{shift}",
+     "offload_mode": "{offload}",
+     "vae_tiling": "{vae_tiling}",
+     "reference_images": "{references}"
+    },
+    "give": {
+     "file_name": "result.file_name"
+    }
+   }
+  },
+  {
+   "id": "bring",
+   "type": "fetch",
+   "needs": [
+    "file_name",
+    "space",
+    "folder"
+   ],
+   "gives": [
+    "made"
+   ],
+   "config": {
+    "role": "painter",
+    "location": "outputs",
+    "path": "{file_name}",
+    "space": "{space}",
+    "into": "{folder}",
+    "give": "made"
+   }
+  }
+ ]
+}

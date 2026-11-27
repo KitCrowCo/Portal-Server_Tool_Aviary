@@ -1,0 +1,113 @@
+{
+ "name": "Check a picture",
+ "group": "images",
+ "read_only": true,
+ "objective": "A model that can see looks at a picture against what was asked (and the pose it was to follow) and answers: how well it matches, each difference that matters, and changes to the prompt or settings that would close them. For a person or an AI deciding whether to keep a picture or make it again.",
+ "roles": {
+  "eyes": {
+   "needs": [
+    "vision"
+   ],
+   "about": "a model that can see; it judges the picture"
+  }
+ },
+ "params": {
+  "space": {
+   "label": "Kept in",
+   "pick": "space",
+   "default": "media"
+  },
+  "path": {
+   "label": "The picture (its path there)",
+   "hint": "What Pose a character (or Make a picture) answered as the made file."
+  },
+  "asked": {
+   "label": "What was asked",
+   "type": "long",
+   "hint": "The request in words: the scene, who, what they do, the style."
+  },
+  "pose": {
+   "label": "The pose it was to follow (in words)",
+   "type": "long",
+   "default": "",
+   "hint": "Look at a pose answers this; empty: the pose is not checked."
+  },
+  "prompt": {
+   "label": "The prompt it was made from",
+   "type": "long",
+   "default": ""
+  },
+  "think": {
+   "label": "Thinking",
+   "type": "boolean",
+   "default": false
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "type": "file_read",
+   "needs": [
+    "space",
+    "path"
+   ],
+   "gives": [
+    "b64"
+   ],
+   "config": {
+    "space": "{space}",
+    "path": "{path}",
+    "base64": true,
+    "give": "b64"
+   }
+  },
+  {
+   "id": "ask",
+   "type": "shape",
+   "needs": [
+    "asked",
+    "pose",
+    "prompt"
+   ],
+   "gives": [
+    "question"
+   ],
+   "config": {
+    "set": {
+     "question": "Judge this picture against what was asked.\n\nWhat was asked:\n{asked}\n\nThe pose it was to follow (empty: not checked):\n{pose}\n\nThe prompt it was made from (empty: not given):\n{prompt}\n\nAnswer in four parts:\n1. MATCH: a number from 0 to 10 and one sentence.\n2. DIFFERENCES: each difference that matters (the pose: which limb, how; who is shown; what they do; the setting; the style), most important first.\n3. CHANGES: for each difference, what to change - words to add, remove or move up in the prompt, or a setting (strength, steps, guidance, a LoRA's strength) - or say it needs a new pose.\n4. KEEP: yes or no."
+    }
+   }
+  },
+  {
+   "id": "look",
+   "type": "capability",
+   "needs": [
+    "b64",
+    "question",
+    "think"
+   ],
+   "gives": [
+    "judged"
+   ],
+   "config": {
+    "role": "eyes",
+    "capability": "chat",
+    "body": {
+     "messages": [
+      {
+       "role": "user",
+       "content": "{question}",
+       "images": [
+        "{b64}"
+       ]
+      }
+     ],
+     "think": "{think}"
+    },
+    "give": {
+     "judged": "text"
+    }
+   }
+  }
+ ]
+}

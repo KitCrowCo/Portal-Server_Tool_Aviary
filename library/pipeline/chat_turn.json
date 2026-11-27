@@ -1,0 +1,408 @@
+{
+ "name": "Chat turn",
+ "group": "conversation",
+ "objective": "One answer to a conversation so far. Pictures attached to the message are read first by the eyes role (a model that can see), and what it read joins the message as text.",
+ "roles": {
+  "main": {
+   "needs": [
+    "chat"
+   ],
+   "about": "the model that answers",
+   "facts": {
+    "chars": {
+     "is": "len(str(messages))",
+     "label": "length of the conversation (characters)",
+     "kind": "number"
+    }
+   }
+  },
+  "eyes": {
+   "needs": [
+    "vision"
+   ],
+   "about": "reads pictures attached to a message (text verbatim, a translation, what is shown) so the model that answers gets them as text. Any model that can see; it may be the same as the one that answers.",
+   "optional": true
+  }
+ },
+ "params": {
+  "messages": {
+   "label": "Conversation so far",
+   "type": "list"
+  },
+  "num_ctx": {
+   "label": "Context window (tokens)",
+   "type": "integer",
+   "default": "",
+   "hint": "How much of the conversation the model holds, per request. Empty: the machine's own plan for the model (with several requests at once, each gets a share of its window, so it can be small). Set (e.g. 32768): exactly this window - the machine plans everything else around it and starts the model with it even when its estimate says it does not fit (the run then shows that, and the load decides). The oldest turns are left out, with a note, once the conversation is longer."
+  },
+  "at_once": {
+   "label": "Requests at once on its server",
+   "type": "integer",
+   "default": "",
+   "advanced": true,
+   "hint": "With a context window set: how many requests the model's server takes at once, each with that window (empty: 1, so this conversation has the server to itself). Without one, the machine's own setting (llama.parallel) holds."
+  },
+  "prefer": {
+   "label": "What to favour when the model is loaded",
+   "pick_from": [
+    [
+     "",
+     "the machine's own order (context, then quality, then speed)"
+    ],
+    [
+     "speed,quality,ctx",
+     "speed first"
+    ],
+    [
+     "quality,ctx,speed",
+     "quality first (full-precision context memory)"
+    ],
+    [
+     "ctx,quality,speed",
+     "the most context first"
+    ]
+   ],
+   "default": "",
+   "hint": "How the machine trades context size, context-memory precision and speed when it loads the model for this conversation. It takes effect when the model is next loaded (a model already loaded for other work is used as it is)."
+  },
+  "kv_type": {
+   "label": "Context memory precision (KV cache)",
+   "pick_from": [
+    [
+     "",
+     "the machine's choice (by what to favour)"
+    ],
+    [
+     "f16",
+     "f16 - full precision, the most memory"
+    ],
+    [
+     "q8_0",
+     "q8_0 - about half, near-lossless"
+    ],
+    [
+     "q5_1",
+     "q5_1"
+    ],
+    [
+     "q5_0",
+     "q5_0"
+    ],
+    [
+     "q4_1",
+     "q4_1"
+    ],
+    [
+     "iq4_nl",
+     "iq4_nl"
+    ],
+    [
+     "q4_0",
+     "q4_0 - about a quarter, the most loss"
+    ]
+   ],
+   "default": "",
+   "advanced": true,
+   "hint": "How precisely the model's context memory (the KV cache) is kept: lower precision holds a longer context in the same memory, with some loss of quality. Set: used exactly, the machine plans everything else around it (it needs flash attention, which the machine turns on). Some GPUs give wrong output with q4 types (the machine's own rules say which); empty lets the machine choose. Takes effect when the model is next loaded."
+  },
+  "prompt": {
+   "label": "System prompt, part 1: a kept prompt",
+   "pick": "prompt",
+   "default": "",
+   "hint": "The system prompt is the one message (role \"system\") the model is sent first with every turn, before the conversation; it is not a message of the conversation and is sent again each turn. It is made of three parts, in this order: 1. this prompt, kept in the library (Prompts); 2. the contexts; 3. the instructions below. What the model was actually sent: the button What the model was sent last, below these settings."
+  },
+  "contexts": {
+   "label": "System prompt, part 2: contexts",
+   "pick": "context",
+   "many": true,
+   "default": [],
+   "hint": "Background texts kept in the library (Contexts), added to the system prompt after the kept prompt, one after another. Elsewhere these are often called a system message, a persona, or context."
+  },
+  "system": {
+   "label": "System prompt, part 3: this conversation's instructions",
+   "default": "",
+   "type": "long",
+   "hint": "Written here, added at the end of the system prompt. Elsewhere called the system prompt or custom instructions. The conversation itself (your messages, role \"user\"; the answers, role \"assistant\") follows the system prompt."
+  },
+  "think": {
+   "label": "Thinking",
+   "type": "boolean",
+   "default": true,
+   "hint": "Lets a model that can reason do so before it answers (Qwen3, DeepSeek, gpt-oss, Inkling ...: its template's thinking switch); the reasoning is shown folded above the answer and is not part of what later turns are sent. Off: the model answers at once (quicker, often less careful). A model that cannot reason ignores it. The chat's Think box shows and changes this for each message."
+  },
+  "effort": {
+   "label": "Reasoning effort",
+   "default": "",
+   "hint": "For models whose chat template takes a level (gpt-oss: low, medium, high; Inkling 2 and others name their own): how much the model reasons before answering. A level a template does not know is ignored by most templates. Sent beside Thinking.",
+   "pick_from": [
+    [
+     "",
+     "the model's own (its template's default)"
+    ],
+    [
+     "low",
+     "low"
+    ],
+    [
+     "medium",
+     "medium"
+    ],
+    [
+     "high",
+     "high"
+    ],
+    [
+     "none",
+     "none (some templates)"
+    ],
+    [
+     "minimal",
+     "minimal (some templates)"
+    ],
+    [
+     "xhigh",
+     "extra high (some templates)"
+    ],
+    [
+     "max",
+     "max (some templates)"
+    ]
+   ]
+  },
+  "session": {
+   "label": "Cache session",
+   "default": "",
+   "internal": true,
+   "hint": "Names the model's kept state for this piece of work, so a machine that keeps such state (the llama program's KV ring) continues from it instead of reading everything again. A conversation gives its own id."
+  },
+  "pictures": {
+   "label": "Pictures with the last message",
+   "type": "list",
+   "default": [],
+   "internal": true,
+   "hint": "Images (base64, as Ollama's messages carry them) attached to the message being answered. Each is read by the eyes role first; the model that answers gets what was read as text, so it needs no vision of its own."
+  },
+  "look": {
+   "label": "How a picture is read",
+   "type": "long",
+   "advanced": true,
+   "default": "Read this picture exactly. First write out all text in it, verbatim and in its original language, keeping its layout as text (lists, tables, arrows, what is grouped together). If any of the text is not in the language named at the end, then give a translation of it into that language. Then say briefly what is drawn or shown that the text does not say. Do not guess at text you cannot read; mark it [unreadable]."
+  },
+  "language": {
+   "label": "Language to translate pictures' text into",
+   "default": "English",
+   "advanced": true
+  }
+ },
+ "steps": [
+  {
+   "id": "ask_look",
+   "type": "shape",
+   "needs": [
+    "look",
+    "language"
+   ],
+   "gives": [
+    "look_ask"
+   ],
+   "config": {
+    "set": {
+     "look_ask": "{look}\n\nLanguage to translate into: {language}"
+    }
+   }
+  },
+  {
+   "id": "look",
+   "type": "pipeline",
+   "needs": [
+    "pictures",
+    "look_ask"
+   ],
+   "gives": [
+    "seen"
+   ],
+   "config": {
+    "plan": {
+     "name": "Read one picture",
+     "roles": {
+      "eyes": {
+       "needs": [
+        "vision"
+       ],
+       "about": "reads attached pictures for the model that answers"
+      }
+     },
+     "keep": true,
+     "params": {
+      "picture": {},
+      "ask": {},
+      "think": {
+       "default": false
+      }
+     },
+     "steps": [
+      {
+       "id": "read",
+       "type": "capability",
+       "needs": [
+        "picture",
+        "ask"
+       ],
+       "gives": [
+        "seen"
+       ],
+       "config": {
+        "role": "eyes",
+        "capability": "chat",
+        "body": {
+         "messages": [
+          {
+           "role": "user",
+           "content": "{ask}",
+           "images": [
+            "{picture}"
+           ]
+          }
+         ],
+         "think": "{think}"
+        },
+        "give": {
+         "seen": "text"
+        }
+       }
+      }
+     ]
+    },
+    "each": "pictures",
+    "inputs": {
+     "picture": "{item}",
+     "ask": "{look_ask}"
+    },
+    "give": {
+     "seen": "seen"
+    }
+   }
+  },
+  {
+   "id": "add_seen",
+   "type": "expr",
+   "needs": [
+    "messages",
+    "seen"
+   ],
+   "gives": [
+    "seen_text"
+   ],
+   "config": {
+    "expr": "'\\n\\n'.join('[Picture ' + str(i + 1) + ' attached, as read by the eyes role:]\\n' + str(s) for i, s in enumerate(seen) if s)",
+    "give": "seen_text"
+   }
+  },
+  {
+   "id": "with_seen",
+   "type": "expr",
+   "needs": [
+    "messages",
+    "seen_text"
+   ],
+   "gives": [
+    "talk"
+   ],
+   "config": {
+    "expr": "messages[:-1] + [dict(messages[-1], content=str(messages[-1]['content']) + '\\n\\n' + seen_text)] if seen_text and messages else messages",
+    "give": "talk"
+   }
+  },
+  {
+   "id": "know",
+   "type": "texts",
+   "needs": [
+    "contexts",
+    "system"
+   ],
+   "gives": [
+    "background"
+   ],
+   "config": {
+    "kind": "context",
+    "ids": "{contexts}",
+    "after": "{system}",
+    "give": "background"
+   }
+  },
+  {
+   "id": "stand",
+   "type": "texts",
+   "needs": [
+    "prompt",
+    "background"
+   ],
+   "gives": [
+    "standing"
+   ],
+   "config": {
+    "kind": "prompt",
+    "ids": "{prompt}",
+    "after": "{background}",
+    "give": "standing"
+   }
+  },
+  {
+   "id": "frame",
+   "type": "expr",
+   "needs": [
+    "talk",
+    "standing"
+   ],
+   "gives": [
+    "framed"
+   ],
+   "config": {
+    "expr": "([{'role': 'system', 'content': standing}] if standing else []) + talk",
+    "give": "framed"
+   }
+  },
+  {
+   "id": "answer",
+   "type": "capability",
+   "needs": [
+    "framed",
+    "session",
+    "num_ctx",
+    "prefer",
+    "at_once",
+    "kv_type"
+   ],
+   "gives": [
+    "text",
+    "thinking",
+    "usage"
+   ],
+   "config": {
+    "role": "main",
+    "capability": "chat",
+    "body": {
+     "messages": "{framed}",
+     "think": "{think}",
+     "firm": [
+      "num_ctx",
+      "kv_cache_type"
+     ],
+     "reasoning_effort": "{effort}",
+     "options": {
+      "cache_session": "{session}",
+      "num_ctx": "{num_ctx}",
+      "goals": "{prefer}",
+      "parallel": "{at_once}",
+      "kv_cache_type": "{kv_type}"
+     }
+    },
+    "give": {
+     "text": "text",
+     "thinking": "thinking",
+     "usage": "usage"
+    }
+   }
+  }
+ ]
+}

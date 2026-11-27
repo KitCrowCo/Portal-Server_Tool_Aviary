@@ -1,0 +1,90 @@
+{
+ "name": "Make a voice from another voice",
+ "group": "voice",
+ "objective": "A new cloned voice (qwen3:<name>) made from a few seconds of another voice reading a sentence: one voice, then spoken in every language the cloning model knows. Only for a voice you have the right to use.",
+ "about": [
+  "name",
+  "voice"
+ ],
+ "roles": {
+  "source": {
+   "needs": [
+    "text_to_speech"
+   ],
+   "about": "the machine whose speech module reads the sentence (any text-to-speech asset there; the voice itself is the field below)"
+  },
+  "keeper": {
+   "needs": [
+    "voice_clone_add"
+   ],
+   "about": "the cloning model and the machine that keeps the new voice (the speech_torch module)"
+  }
+ },
+ "params": {
+  "source_voice": {
+   "label": "Voice to copy",
+   "default": "kokoro:af_sky",
+   "hint": "A voice id that machine's speech module serves (engine:name, e.g. kokoro:af_sky; a bare name is a Piper voice). Its /api/voices lists them."
+  },
+  "name": {
+   "label": "Name of the new voice",
+   "default": "sky",
+   "hint": "Letters, digits, _ and -. It becomes qwen3:<name>. A name that exists is refused: no voice is replaced."
+  },
+  "text": {
+   "label": "What the source voice reads",
+   "type": "long",
+   "default": "The morning light came slowly over the hills, and by the time the kettle sang, the whole valley was awake and talking.",
+   "hint": "One or two plain sentences, about 5 to 12 seconds spoken. The clone learns the voice from this recording and these exact words."
+  }
+ },
+ "steps": [
+  {
+   "id": "read",
+   "type": "capability",
+   "needs": [
+    "text",
+    "source_voice"
+   ],
+   "gives": [
+    "audio"
+   ],
+   "config": {
+    "role": "source",
+    "capability": "text_to_speech",
+    "body": {
+     "text": "{text}",
+     "voice": "{source_voice}"
+    },
+    "give": {
+     "audio": "result.audio_b64"
+    }
+   }
+  },
+  {
+   "id": "keep",
+   "type": "capability",
+   "once": true,
+   "needs": [
+    "audio",
+    "name",
+    "text"
+   ],
+   "gives": [
+    "voice"
+   ],
+   "config": {
+    "role": "keeper",
+    "capability": "voice_clone_add",
+    "body": {
+     "name": "{name}",
+     "audio_b64": "{audio}",
+     "text": "{text}"
+    },
+    "give": {
+     "voice": "result.voice"
+    }
+   }
+  }
+ ]
+}

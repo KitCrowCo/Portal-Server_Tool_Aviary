@@ -1,0 +1,46 @@
+{
+ "name": "Pose bridge (3D OpenPose editor)",
+ "about": "The collaborative pose bridge beside a 3D OpenPose editor (its own small API, port 8080 by default): poses a person shapes in the editor and an AI drafts, kept as files. Each file is an asset that does \"pose\", and \"latest\" names whichever changed last. pose_read gives one (\"pose\": its file name, \"latest\", or \"active\" for the last record written); pose_add keeps an editor scene as a new file (\"pose\": the name wanted, \"scene\": the scene; a taken name gets -2, -3); pose_write writes a record and makes it the active one. It has no key of its own: keep it on the home network.",
+ "describe": {
+  "path": "/health"
+ },
+ "assets": {
+  "path": "/poses",
+  "list": "files",
+  "name": "",
+  "capabilities": {
+   "default": [
+    "pose",
+    "pose_read",
+    "pose_add",
+    "pose_write"
+   ]
+  },
+  "models": false
+ },
+ "run": {
+  "pose_read": {
+   "method": "GET",
+   "path": "/poses/{pose}",
+   "result": "data"
+  },
+  "pose_write": {
+   "method": "PUT",
+   "path": "/poses/{pose}",
+   "body": {
+    "stage": "{stage}",
+    "actor": "{actor}",
+    "paused": "{paused}",
+    "notes": "{notes}",
+    "pose": "{record}"
+   },
+   "result": ""
+  },
+  "pose_add": {
+   "method": "PUT",
+   "path": "/files/{pose}",
+   "body": "{scene}",
+   "result": ""
+  }
+ }
+}

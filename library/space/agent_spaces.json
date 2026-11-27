@@ -1,0 +1,5 @@
+{
+ "name": "AI members' own spaces",
+ "about": "Each AI member's own space, one folder per space name: what it keeps without asking (notes, drafts, plans). Open it to read what an AI made; a change from a person here waits as a proposal, since the AI is the space's stakeholder too.",
+ "root": "./data/_tools/aviary/agent_spaces"
+}

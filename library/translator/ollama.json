@@ -1,0 +1,98 @@
+{
+ "name": "Ollama",
+ "about": "The Ollama server's own API (port 11434 by default). Chat, embeddings and vision (a model whose name says it sees: llava, gemma3, qwen2.5vl ...); it says nothing of memory, so placement takes it as it is. Models there can be removed and pulled from here (manage); they cannot be copied to or from it, since it keeps its files its own way. What it holds loaded (its /api/ps: size, the part on the GPU, context, until when) is shown in Asio, Now.",
+ "describe": {
+  "path": "/api/version"
+ },
+ "assets": {
+  "path": "/api/tags",
+  "list": "models",
+  "name": "name",
+  "size": "size",
+  "facts": {
+   "quant": "details.quantization_level",
+   "params": "details.parameter_size",
+   "family": "details.family"
+  },
+  "capabilities": {
+   "default": [
+    "chat",
+    "generate"
+   ],
+   "match": {
+    "embed": "embed|bge|nomic|minilm|e5-|gte-|snowflake"
+   },
+   "add": {
+    "vision": "llava|vision|-vl|vl:|qwen2.5vl|qwen3-vl|gemma3|minicpm-v|moondream|granite3.2-vision|mistral-small3|llama4"
+   }
+  }
+ },
+ "run": {
+  "chat": {
+   "path": "/api/chat",
+   "stream": "ndjson",
+   "body": {
+    "model": "{model}",
+    "messages": "{messages}",
+    "think": "{think}",
+    "options": "{options}",
+    "tools": "{tools}",
+    "stream": true
+   },
+   "text": "message.content",
+   "thinking": "message.thinking",
+   "tool_calls": "message.tool_calls",
+   "done": "done",
+   "usage": {
+    "prompt_n": "prompt_eval_count",
+    "gen_n": "eval_count",
+    "prompt_ms": [
+     "prompt_eval_duration",
+     1e-06
+    ],
+    "gen_ms": [
+     "eval_duration",
+     1e-06
+    ]
+   }
+  },
+  "embed": {
+   "path": "/api/embed",
+   "body": {
+    "model": "{model}",
+    "input": "{input}"
+   },
+   "result": "embeddings"
+  }
+ },
+ "manage": {
+  "remove": {
+   "method": "DELETE",
+   "path": "/api/delete",
+   "body": {
+    "model": "{model}"
+   }
+  },
+  "pull": {
+   "method": "POST",
+   "path": "/api/pull",
+   "body": {
+    "model": "{model}",
+    "stream": false
+   }
+  }
+ },
+ "state": {
+  "path": "/api/ps",
+  "list": "models",
+  "fields": {
+   "name": "name",
+   "size": "size",
+   "vram": "size_vram",
+   "context": "context_length",
+   "until": "expires_at",
+   "params": "details.parameter_size",
+   "quant": "details.quantization_level"
+  }
+ }
+}

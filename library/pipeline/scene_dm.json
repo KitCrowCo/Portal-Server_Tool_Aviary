@@ -1,0 +1,115 @@
+{
+ "name": "Scene: two characters and a DM",
+ "group": "simulation",
+ "objective": "Two characters play a scene while a game master (DM) directs it: before each round the DM says what happens, who speaks (NEXT:), and may give one character a private direction (TO <name>:). Ends when the DM says DONE or the rounds run out. Each role can be its own model, a resource pool, or the same model.",
+ "roles": {
+  "a": {
+   "needs": [
+    "chat"
+   ],
+   "about": "the first character's model"
+  },
+  "b": {
+   "needs": [
+    "chat"
+   ],
+   "about": "the second character's model"
+  },
+  "dm": {
+   "needs": [
+    "chat"
+   ],
+   "about": "the game master's model: directs the scene (the strongest of the three helps most here)"
+  }
+ },
+ "keep": true,
+ "params": {
+  "opening": {
+   "label": "The scene as it starts",
+   "type": "long",
+   "default": ""
+  },
+  "a_name": {
+   "label": "First character's name",
+   "default": "Ari"
+  },
+  "a_brief": {
+   "label": "Who the first character is",
+   "type": "long",
+   "default": "",
+   "hint": "What they want, what they know, how they speak."
+  },
+  "b_name": {
+   "label": "Second character's name",
+   "default": "Bram"
+  },
+  "b_brief": {
+   "label": "Who the second character is",
+   "type": "long",
+   "default": ""
+  },
+  "dm_brief": {
+   "label": "The DM's brief",
+   "type": "long",
+   "default": "You are the game master of this scene. Keep it moving toward a turning point, keep the characters true to themselves and to the world, and end it (DONE) once it has reached one.",
+   "hint": "The rules of the world and what the scene is for."
+  },
+  "rounds": {
+   "label": "Most rounds",
+   "type": "integer",
+   "default": 8
+  },
+  "think": {
+   "label": "Thinking",
+   "type": "boolean",
+   "default": false,
+   "advanced": true
+  }
+ },
+ "steps": [
+  {
+   "id": "scene",
+   "type": "turns",
+   "needs": [
+    "opening",
+    "a_name",
+    "a_brief",
+    "b_name",
+    "b_brief",
+    "dm_brief",
+    "rounds",
+    "think"
+   ],
+   "gives": [
+    "transcript",
+    "notes",
+    "ended"
+   ],
+   "keep": true,
+   "config": {
+    "opening": "{opening}",
+    "rounds": "{rounds}",
+    "think": "{think}",
+    "speakers": [
+     {
+      "name": "{a_name}",
+      "role": "a",
+      "system": "You are {a_name} in a scene, and only {a_name}: write only what {a_name} says and does, in a few sentences, then stop.\n{a_brief}"
+     },
+     {
+      "name": "{b_name}",
+      "role": "b",
+      "system": "You are {b_name} in a scene, and only {b_name}: write only what {b_name} says and does, in a few sentences, then stop.\n{b_brief}"
+     }
+    ],
+    "judge": {
+     "name": "DM",
+     "role": "dm",
+     "directs": true,
+     "done": "DONE",
+     "system": "{dm_brief}\nThe characters are {a_name} and {b_name}. Each round: narrate what happens in a few sentences; then a line NEXT: with who speaks, in order; optionally a line TO <name>: with a direction only that character sees. Write DONE alone when the scene is over."
+    }
+   }
+  }
+ ]
+}
